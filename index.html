@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transcriptobot - Reunião com a Área Interdisciplinar da CAPES | 20.02.2025</title>
+    <script src="JS/jquery.min.js"></script>
+    <script src="JS/isotope.pkgd.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+            border: 3px solid #6a97a0
+        }
+        #header-img {
+            display: block;
+            margin: 0 auto;
+            height: 100px;
+        }
+        #search {
+            padding: 10px;
+            width: 300px;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        .grid {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+.grid-item {
+    width: 99%;
+    padding: 5px;
+    background: #f8fbff;
+    text-align: left;
+    border: 1px solid #90d0ff;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0px auto; /* Centers within parent */
+}
+        .thumbnail {
+            height: 64px;
+            width: auto;
+            flex-shrink: 0;
+        }
+        .timestamp {
+            font-size: 12px;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 5px;
+        }
+        .text-container {
+            flex-grow: 1;
+        }
+        .text-line {
+            font-style: italic;
+            color: #666;
+        }
+        .text-line.bold {
+            font-weight: bold;
+            color: black;
+            font-style: normal;
+        }
+    </style>
+</head>
+<body>
+    <img id="header-img" src="Images/Transcriptobot.svg" alt="Header Image">
+    <h2>Reunião com a Área Interdisciplinar da CAPES | 20.02.2025</h2>
+    <input type="text" id="search" placeholder="Filtrar por...">
+    <div class="grid" id="grid-container"></div>
+
+    <script>
+        function convertTimestampToSeconds(timestamp) {
+            const match = timestamp.match(/(\d+):(\d+):(\d+),(\d+)/);
+            if (!match) return 0;
+            const hours = parseInt(match[1]);
+            const minutes = parseInt(match[2]);
+            const seconds = parseInt(match[3]);
+            return hours * 3600 + minutes * 60 + seconds;
+        }
+
+        function loadSRTFile() {
+            fetch("subtitles.srt")
+                .then(response => response.text())
+                .then(data => {
+                    var lines = data.split('\n');
+                    var entries = [];
+                    var tempEntry = null;
+
+                    for (let i = 0; i < lines.length; i++) {
+                        let line = lines[i].trim();
+
+                        if (!isNaN(line)) {
+                            if (tempEntry !== null && tempEntry.text.length > 0) {
+                                entries.push(tempEntry);
+                            }
+                            tempEntry = { id: line, timestamp: "", text: [] };
+                        } else if (line.includes("-->")) {
+                            if (tempEntry) tempEntry.timestamp = line;
+                        } else if (line === "") {
+                            if (tempEntry !== null && tempEntry.text.length > 0) {
+                                entries.push(tempEntry);
+                                tempEntry = null;
+                            }
+                        } else {
+                            if (tempEntry) tempEntry.text.push(line);
+                        }
+                    }
+                    
+                    if (tempEntry !== null && tempEntry.text.length > 0) {
+                        entries.push(tempEntry);
+                    }
+
+                    console.log("Parsed SRT Entries:", entries);
+                    
+                    var gridContainer = document.getElementById("grid-container");
+                    gridContainer.innerHTML = "";
+                    
+                    for (let i = 0; i < entries.length - 2; i++) {
+                        var timestamp = entries[i].timestamp;
+                        var videoStart = convertTimestampToSeconds(timestamp);
+                        var thumbnailSrc = `Thumbnails/${entries[i].id}.jpg`;
+                        var videoUrl = `https://www.youtube.com/live/JcU74dpG3sI?t=${videoStart}s`;
+                        
+                        var div = document.createElement("div");
+                        div.className = "grid-item";
+                        div.setAttribute("data-name", entries[i].text.join(" "));
+                        div.innerHTML = `
+                            <a href="${videoUrl}" target="_blank">
+                                <img src="${thumbnailSrc}" class="thumbnail" alt="Thumbnail">
+                            </a>
+                            <div class="text-container">
+                                <div class='timestamp'>${timestamp}</div>
+                                <p>
+                                    <span class='text-line'>${entries[i].text.join(" ")}</span> 
+                                    <span class='text-line bold'>${entries[i+1].text.join(" ")}</span> 
+                                    <span class='text-line'>${entries[i+2].text.join(" ")}</span>
+                                </p>
+                            </div>`;
+                        gridContainer.appendChild(div);
+                    }
+                    
+                    var $grid = $('.grid').isotope({
+                        itemSelector: '.grid-item',
+                        layoutMode: 'vertical'
+                    });
+                    
+                    document.getElementById("search").addEventListener("keyup", function() {
+                        var searchText = this.value.toLowerCase();
+                        $grid.isotope({
+                            filter: function() {
+                                return this.textContent.toLowerCase().includes(searchText);
+                            }
+                        });
+                    });
+                })
+                .catch(error => console.error("Error loading the SRT file:", error));
+        }
+        
+        document.addEventListener("DOMContentLoaded", loadSRTFile);
+    </script>
+</body>
+</html>

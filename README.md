@@ -1,1 +1,1 @@
-Version 0.01
+Transcriptobot Version 0.02
